@@ -20,7 +20,7 @@ const COLORS = [
 ];
 
 // ============ СОСТОЯНИЕ ============
-let participants = ['Саня', 'Свят', 'Тема', 'Слава'];
+let participants = ['Свят', 'Слава', 'Тема', 'Саня'];
 let history = [];
 let currentRotation = 0;
 let isSpinning = false;
