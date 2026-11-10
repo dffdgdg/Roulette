@@ -1,104 +1,257 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Рулетка Судьбы</title>
-    <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Колесо — жребий на бумаге</title>
+<meta name="description" content="Колесо-рулетка для случайного выбора: несколько колёс, своя музыка и картинка. Всё хранится в вашем браузере.">
+<meta name="theme-color" content="#EFE8D8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%23D9482B' stroke='%231B1A17' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23E8B031' stroke='%231B1A17' stroke-width='2'/%3E%3C/svg%3E">
+<script>
+// Тема выставляется до первой отрисовки, чтобы не мигало
+(function () {
+  var dark = false;
+  try {
+    var pref = 'auto';
+    var raw = localStorage.getItem('wheel:v1:state');
+    if (raw) {
+      var g = JSON.parse(raw).global;
+      if (g && (g.theme === 'light' || g.theme === 'dark')) pref = g.theme;
+    }
+    dark = pref === 'dark' || (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  } catch (e) {
+    try { dark = matchMedia('(prefers-color-scheme: dark)').matches; } catch (e2) {}
+  }
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+})();
+</script>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Рулетка Судьбы</h1>
 
-        <div class="layout">
-            <div class="left-panel">
-                <div class="card">
-                    <div class="card-header">
-                        <h2>👥 Участники</h2>
-                        <span class="badge" id="count">4</span>
-                    </div>
-                    <div class="card-body">
-                        <div id="participantsList" class="scrollable"></div>
-                        <div class="add-row">
-                            <input type="text" id="newName" placeholder="Новое имя..." maxlength="15">
-                            <button class="btn-add" id="addBtn">+</button>
-                        </div>
-                    </div>
-                </div>
+<!-- Набор иконок: штрих 2 px, срезанные концы -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20l1-5L16 4l4 4L9 19zM14 6l4 4"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9 9h11v11H9zM4 4h11v3M4 4v11h3"/></symbol>
+    <symbol id="i-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M3 7h4l9 10h5M3 17h4l3-3.5M13 10.5L16 7h5M18 4l3 3-3 3M18 14l3 3-3 3"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 4L4 9l5 5M4 9h10a6 6 0 0 1 0 12h-4"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM20 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 16l5-5 4 4 3-3 6 6M14 7h3v3h-3z"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h2M3 12h2M3 18h2"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2"/></symbol>
+    <symbol id="i-wheel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v7M12 14v7M3 12h7M14 12h7"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></symbol>
+    <symbol id="i-paste" viewBox="0 0 24 24"><path d="M6 5h12v16H6zM9 5V3h6v2M9 11h6M9 15h6"/></symbol>
+  </defs>
+</svg>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h2>🎵 Музыка</h2>
-                    </div>
-                    <div class="card-body">
-                        <div id="musicList"></div>
-                        <div class="volume-row">
-                            <label>🔊</label>
-                            <input type="range" class="volume-slider" id="volume" min="0" max="100" value="70">
-                            <span class="volume-value" id="volumeVal">70%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h2>🖼️ Фон</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="bg-grid" id="bgGrid"></div>
-                        <div class="bg-upload">
-                            <label class="bg-upload-btn">
-                                <span>📁</span>
-                                <span>Загрузить свой фон</span>
-                                <input type="file" id="bgUpload" accept="image/*">
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="roulette-section">
-                <div class="wheel-container">
-                    <div class="pointer"></div>
-                    <canvas id="wheel" width="320" height="320"></canvas>
-                </div>
-
-                <button class="spin-btn" id="spinBtn">КРУТИТЬ</button>
-
-                <div class="result-box" id="resultBox">
-                    <div class="result-label">Результат</div>
-                    <div class="result-text" id="resultText">Жми кнопку!</div>
-                </div>
-            </div>
-
-            <div class="right-panel">
-                <div class="card">
-                    <div class="card-header">
-                        <h2>📜 История</h2>
-                        <button class="btn-clear" id="clearBtn" title="Очистить">🗑️</button>
-                    </div>
-                    <div class="card-body">
-                        <div id="historyList" class="scrollable">
-                            <div class="history-empty">Пока пусто 🎲</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div id="app" class="app">
+  <header class="topbar">
+    <div class="logo"><span class="logo-word">Колесо</span><span class="logo-tag">жребий на бумаге</span></div>
+    <div class="top-actions">
+      <button type="button" class="btn btn-icon" id="btn-theme" aria-label="Сменить тему" title="Сменить тему"><svg class="i" aria-hidden="true"><use href="#i-theme"/></svg></button>
+      <button type="button" class="btn btn-icon" id="btn-settings" aria-label="Настройки" title="Настройки"><svg class="i" aria-hidden="true"><use href="#i-gear"/></svg></button>
     </div>
+  </header>
 
-    <div class="modal-overlay" id="modal">
-        <div class="modal">
-            <div class="modal-crown">👑</div>
-            <div class="modal-title">ПОБЕДИТЕЛЬ</div>
-            <div class="modal-winner" id="modalWinner">-</div>
-            <button class="modal-btn" id="modalClose">Круто!</button>
+  <div id="storage-banner" class="banner" role="status" hidden>
+    <span id="storage-banner-text"></span>
+    <button type="button" class="btn btn-icon btn-small" id="storage-banner-close" aria-label="Скрыть сообщение"><svg class="i" aria-hidden="true"><use href="#i-close"/></svg></button>
+  </div>
+
+  <main class="layout">
+    <!-- Левая колонка: колёса -->
+    <aside class="col col-wheels" id="panel-wheels" aria-label="Колёса">
+      <div class="sheet-head">
+        <span class="label">Колёса</span>
+        <button type="button" class="btn btn-icon btn-small" data-close-sheet aria-label="Закрыть панель"><svg class="i" aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="col-head">
+        <h2 class="label">Колёса <span id="wheel-count" class="mono"></span></h2>
+      </div>
+      <ul id="wheel-list" class="wl"></ul>
+      <button type="button" class="btn btn-wide" id="btn-new-wheel"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>Новое колесо</button>
+    </aside>
+
+    <!-- Центр: колесо -->
+    <section class="stage" aria-label="Колесо">
+      <div class="stage-head">
+        <p class="label">Сейчас крутим</p>
+        <h1 id="wheel-title" class="stage-title">Колесо</h1>
+      </div>
+
+      <div class="wheel-box" id="wheel-box">
+        <canvas id="wheel-canvas" role="img" aria-label="Колесо"></canvas>
+        <button type="button" class="hub" id="btn-spin" aria-label="Крутить колесо">Крутить</button>
+        <p class="empty-hint" id="empty-hint" hidden></p>
+      </div>
+
+      <div class="stage-controls">
+        <button type="button" class="btn btn-primary btn-big" id="btn-spin-main"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>Крутить <kbd>Space</kbd></button>
+        <div class="ctl">
+          <label class="label" for="duration">Длительность</label>
+          <div class="range-row"><input type="range" id="duration" min="3" max="20" step="1" value="7"><output id="duration-out" for="duration" class="mono">7 с</output></div>
         </div>
-    </div>
+        <label class="switch"><input type="checkbox" id="remove-winner"><span class="switch-box"></span><span class="switch-text">Убирать выпавший</span></label>
+        <button type="button" class="btn btn-small js-restore" id="btn-restore" hidden><svg class="i" aria-hidden="true"><use href="#i-undo"/></svg><span id="restore-label">Вернуть выбывших</span></button>
+      </div>
+      <p class="stage-status mono" id="stage-status"></p>
+      <p class="sr-only" id="live" role="status" aria-live="polite"></p>
+    </section>
 
-    <audio id="audio"></audio>
+    <!-- Правая колонка: вкладки -->
+    <aside class="col col-panel" id="panel-main" data-tab="items" aria-label="Настройки колеса">
+      <div class="sheet-head">
+        <span class="label">Настройки колеса</span>
+        <button type="button" class="btn btn-icon btn-small" data-close-sheet aria-label="Закрыть панель"><svg class="i" aria-hidden="true"><use href="#i-close"/></svg></button>
+      </div>
+      <div class="tabs" id="panel-tabs" role="tablist" aria-label="Разделы">
+        <button type="button" role="tab" id="tabbtn-items" data-tab="items" aria-controls="tab-items" aria-selected="true">Варианты</button>
+        <button type="button" role="tab" id="tabbtn-sound" data-tab="sound" aria-controls="tab-sound" aria-selected="false" tabindex="-1">Звук</button>
+        <button type="button" role="tab" id="tabbtn-image" data-tab="image" aria-controls="tab-image" aria-selected="false" tabindex="-1">Картинка</button>
+        <button type="button" role="tab" id="tabbtn-history" data-tab="history" aria-controls="tab-history" aria-selected="false" tabindex="-1">История</button>
+      </div>
 
-    <script src="js/script.js"></script>
+      <!-- Варианты -->
+      <section class="tabpanel" id="tab-items" role="tabpanel" aria-labelledby="tabbtn-items">
+        <fieldset id="items-fieldset" class="fs">
+          <form id="add-form" class="add-form" autocomplete="off">
+            <label class="sr-only" for="add-input">Новый вариант</label>
+            <input type="text" id="add-input" class="field" maxlength="120" placeholder="Новый вариант и Enter">
+            <button type="submit" class="btn btn-icon btn-primary" aria-label="Добавить вариант" title="Добавить"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
+          </form>
+          <div class="btn-row">
+            <button type="button" class="btn btn-small" id="btn-bulk"><svg class="i" aria-hidden="true"><use href="#i-paste"/></svg>Списком</button>
+            <button type="button" class="btn btn-small" id="btn-shuffle"><svg class="i" aria-hidden="true"><use href="#i-shuffle"/></svg>Перемешать</button>
+            <button type="button" class="btn btn-small" id="btn-clear"><svg class="i" aria-hidden="true"><use href="#i-trash"/></svg>Очистить</button>
+          </div>
+          <div class="palette-row">
+            <label class="label" for="palette-select">Палитра</label>
+            <select id="palette-select" class="field"></select>
+            <div id="palette-preview" class="palette-preview" aria-hidden="true"></div>
+          </div>
+          <p class="hint">Смена палитры перекрашивает все варианты.</p>
+          <div class="list-head"><span class="label">Варианты</span><span class="label mono" id="items-count"></span></div>
+          <ol id="items-list" class="items"></ol>
+          <div id="removed-box" class="removed" hidden>
+            <div class="list-head"><span class="label">Выбыли</span>
+              <button type="button" class="btn btn-small js-restore"><svg class="i" aria-hidden="true"><use href="#i-undo"/></svg>Вернуть</button>
+            </div>
+            <div id="removed-list" class="chips"></div>
+          </div>
+        </fieldset>
+      </section>
+
+      <!-- Звук -->
+      <section class="tabpanel" id="tab-sound" role="tabpanel" aria-labelledby="tabbtn-sound" hidden>
+        <div class="block">
+          <div class="ctl">
+            <label class="label" for="volume">Громкость</label>
+            <div class="range-row"><input type="range" id="volume" min="0" max="100" step="1" value="80"><output id="volume-out" for="volume" class="mono">80</output></div>
+          </div>
+          <label class="switch"><input type="checkbox" id="tick-global"><span class="switch-box"></span><span class="switch-text">Тиканье колышков</span></label>
+        </div>
+
+        <div class="block">
+          <h3 class="block-title">Своя музыка для этого колеса</h3>
+          <div class="drop" id="audio-drop">
+            <p class="drop-text" id="audio-empty">Перетащите файл сюда или выберите. До 15 МБ: MP3, WAV, OGG, M4A.</p>
+            <p class="drop-file mono" id="audio-info" hidden></p>
+            <div class="btn-row">
+              <button type="button" class="btn btn-small" id="btn-audio-pick"><svg class="i" aria-hidden="true"><use href="#i-upload"/></svg>Выбрать файл</button>
+              <button type="button" class="btn btn-small" id="btn-audio-test"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg><span id="audio-test-label">Тест</span></button>
+              <button type="button" class="btn btn-small" id="btn-audio-remove"><svg class="i" aria-hidden="true"><use href="#i-trash"/></svg>Удалить музыку</button>
+            </div>
+            <input type="file" id="audio-file" accept="audio/*" hidden>
+          </div>
+          <p class="hint">Играет только во время прокрутки и затихает к остановке колеса.</p>
+          <fieldset id="music-fieldset" class="fs stack">
+            <label class="switch"><input type="checkbox" id="music-loop"><span class="switch-box"></span><span class="switch-text">Зацикливать короткий трек</span></label>
+            <label class="switch"><input type="checkbox" id="music-tick"><span class="switch-box"></span><span class="switch-text">Тиканье поверх музыки</span></label>
+            <label class="switch"><input type="checkbox" id="music-fit"><span class="switch-box"></span><span class="switch-text">Подогнать длительность под трек</span></label>
+            <div class="ctl ctl-inline">
+              <label class="label" for="music-start">Начинать с секунды</label>
+              <input type="number" id="music-start" class="field field-num" min="0" max="3600" step="1" value="0">
+            </div>
+          </fieldset>
+        </div>
+      </section>
+
+      <!-- Картинка -->
+      <section class="tabpanel" id="tab-image" role="tabpanel" aria-labelledby="tabbtn-image" hidden>
+        <div class="block">
+          <h3 class="block-title">Картинка внутри колеса</h3>
+          <div class="drop" id="image-drop">
+            <div class="drop-row">
+              <canvas id="image-preview" class="preview" width="192" height="192" hidden aria-hidden="true"></canvas>
+              <div>
+                <p class="drop-text" id="image-empty">Перетащите картинку сюда или выберите. Она ляжет под секторы.</p>
+                <p class="drop-file mono" id="image-info" hidden></p>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn btn-small" id="btn-image-pick"><svg class="i" aria-hidden="true"><use href="#i-upload"/></svg>Выбрать файл</button>
+              <button type="button" class="btn btn-small" id="btn-image-remove"><svg class="i" aria-hidden="true"><use href="#i-trash"/></svg>Удалить картинку</button>
+            </div>
+            <input type="file" id="image-file" accept="image/*" hidden>
+          </div>
+        </div>
+        <div class="block">
+          <h3 class="block-title">Деления</h3>
+          <p class="hint" id="image-hint">Сначала загрузите картинку, тогда эти настройки заработают.</p>
+          <fieldset id="image-fieldset" class="fs stack" disabled>
+            <div class="seg" id="image-presets" role="group" aria-label="Пресеты делений">
+              <button type="button" data-preset="normal" aria-pressed="true">Обычное</button>
+              <button type="button" data-preset="labels" aria-pressed="false">Картинка + подписи</button>
+              <button type="button" data-preset="clean" aria-pressed="false">Чистая картинка</button>
+            </div>
+            <div class="ctl">
+              <label class="label" for="image-fill">Заливка секторов</label>
+              <div class="range-row"><input type="range" id="image-fill" min="0" max="100" step="1" value="100"><output id="image-fill-out" for="image-fill" class="mono">100 %</output></div>
+            </div>
+            <label class="switch"><input type="checkbox" id="image-lines"><span class="switch-box"></span><span class="switch-text">Линии между секторами</span></label>
+            <label class="switch"><input type="checkbox" id="image-labels"><span class="switch-box"></span><span class="switch-text">Подписи вариантов</span></label>
+            <label class="switch"><input type="checkbox" id="image-rotate"><span class="switch-box"></span><span class="switch-text">Картинка вращается вместе с колесом</span></label>
+          </fieldset>
+        </div>
+      </section>
+
+      <!-- История -->
+      <section class="tabpanel" id="tab-history" role="tabpanel" aria-labelledby="tabbtn-history" hidden>
+        <div class="list-head"><span class="label">Результаты <span class="mono" id="history-count"></span></span>
+          <button type="button" class="btn btn-small" id="btn-history-clear"><svg class="i" aria-hidden="true"><use href="#i-trash"/></svg>Стереть</button>
+        </div>
+        <ol id="history-list" class="hist"></ol>
+      </section>
+    </aside>
+  </main>
+
+  <div class="sheet-scrim" id="sheet-scrim"></div>
+
+  <nav class="bottom-nav" aria-label="Разделы">
+    <button type="button" data-sheet="wheels" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-wheel"/></svg><span>Колёса</span></button>
+    <button type="button" data-sheet="items" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-list"/></svg><span>Варианты</span></button>
+    <button type="button" data-sheet="sound" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-music"/></svg><span>Звук</span></button>
+    <button type="button" data-sheet="image" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-image"/></svg><span>Картинка</span></button>
+    <button type="button" data-sheet="history" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span>История</span></button>
+  </nav>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="layer-root"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<noscript><p class="noscript">Колесу нужен JavaScript. Включите его в браузере.</p></noscript>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
